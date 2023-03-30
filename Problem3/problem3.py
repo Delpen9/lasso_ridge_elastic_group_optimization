@@ -2,6 +2,10 @@
 import os
 import numpy as np
 
+# Disable warning messages
+import warnings
+warnings.filterwarnings("ignore")
+
 # Sklearn Modules
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import RandomizedSearchCV
@@ -30,9 +34,8 @@ def ridge_regression(
     ridge = Ridge()
 
     param_dist = {
-        'alpha': uniform(0, 10),
-        'fit_intercept': [True, False],
-        'normalize': [True, False]
+        'alpha': np.concatenate((np.arange(0.01, 1, 0.2), np.arange(0, 10, 0.5))),
+        'fit_intercept': [True, False]
     }
 
     rand_search_ridge = RandomizedSearchCV(
@@ -46,7 +49,7 @@ def ridge_regression(
 
     best_estimator = rand_search_ridge.best_estimator_
     best_estimator_coefficients = rand_search_ridge.best_estimator_.coef_
-    best_parameters = rand_search_ridge.best_estimator_.best_params_
+    best_parameters = rand_search_ridge.best_params_
 
     return (best_estimator, best_estimator_coefficients, best_parameters)
 
@@ -56,12 +59,11 @@ def lasso_regression(
 ) -> tuple[object, np.ndarray, dict]:
     '''
     '''
-    lasso = lasso()
+    lasso = Lasso()
 
     param_dist = {
-        'alpha': uniform(0, 10),
-        'fit_intercept': [True, False],
-        'normalize': [True, False]
+        'alpha': np.concatenate((np.arange(0.01, 1, 0.2), np.arange(0, 10, 0.5))),
+        'fit_intercept': [True, False]
     }
 
     rand_search_lasso = RandomizedSearchCV(
@@ -75,7 +77,7 @@ def lasso_regression(
 
     best_estimator = rand_search_lasso.best_estimator_
     best_estimator_coefficients = rand_search_lasso.best_estimator_.coef_
-    best_parameters = rand_search_lasso.best_estimator_.best_params_
+    best_parameters = rand_search_lasso.best_params_
 
     return (best_estimator, best_estimator_coefficients, best_parameters)
 
@@ -88,10 +90,9 @@ def elastic_net_regression(
     elastic_net = ElasticNet()
 
     param_dist = {
-        'alpha': [0.1, 0.5, 1.0, 5.0, 10.0],
-        'l1_ratio': [0.1, 0.3, 0.5, 0.7, 0.9],
-        'fit_intercept': [True, False],
-        'normalize': [True, False]
+        'alpha': np.concatenate((np.arange(0.01, 1, 0.2), np.arange(0, 10, 0.5))),
+        'l1_ratio': np.arange(0, 1.1, 0.1),
+        'fit_intercept': [True, False]
     }
 
     rand_search_elastic_net = RandomizedSearchCV(
@@ -105,7 +106,7 @@ def elastic_net_regression(
 
     best_estimator = rand_search_elastic_net.best_estimator_
     best_estimator_coefficients = rand_search_elastic_net.best_estimator_.coef_
-    best_parameters = rand_search_elastic_net.best_estimator_.best_params_
+    best_parameters = rand_search_elastic_net.best_params_
 
     return (best_estimator, best_estimator_coefficients, best_parameters)
 
@@ -125,15 +126,15 @@ if __name__ == '__main__':
 
     # Standardize X
     scaler = StandardScaler()
-    X_train = scaler.fit_transform(X)
+    X_train = scaler.fit_transform(X_train)
+    X_test = scaler.transform(X_test)
 
     # Ridge
     ridge_best_estimator, ridge_best_estimator_coefficients, ridge_best_parameters = ridge_regression(X_train, y_train)
     y_pred = ridge_best_estimator.predict(X_test)
     test_mse = mean_squared_error(y_test, y_pred)
     print(fr'''
-    The mean squared error for ridge regression on the test set is:
-    {test_mse}
+    The mean squared error for ridge regression on the test set is: {round(test_mse, 5)}
     ''')
 
     # Lasso
@@ -141,16 +142,14 @@ if __name__ == '__main__':
     y_pred = lasso_best_estimator.predict(X_test)
     test_mse = mean_squared_error(y_test, y_pred)
     print(fr'''
-    The mean squared error for lasso regression on the test set is:
-    {test_mse}
+    The mean squared error for lasso regression on the test set is: {round(test_mse, 5)}
     ''')
 
     # Elastic Net
     elastic_net_best_estimator, elastic_net_best_estimator_coefficients, elastic_net_best_parameters = elastic_net_regression(X_train, y_train)
-    y_pred = elastic_net_regression.predict(X_test)
+    y_pred = elastic_net_best_estimator.predict(X_test)
     test_mse = mean_squared_error(y_test, y_pred)
     print(fr'''
-    The mean squared error for elastic net regression on the test set is:
-    {test_mse}
+    The mean squared error for elastic net regression on the test set is: {round(test_mse, 5)}
     ''')
 
