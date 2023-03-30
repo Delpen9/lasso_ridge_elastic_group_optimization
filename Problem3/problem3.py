@@ -79,6 +79,36 @@ def lasso_regression(
 
     return (best_estimator, best_estimator_coefficients, best_parameters)
 
+def elastic_net_regression(
+    X : np.ndarray,
+    y : np.ndarray
+) -> tuple[object, np.ndarray, dict]:
+    '''
+    '''
+    elastic_net = ElasticNet()
+
+    param_dist = {
+        'alpha': [0.1, 0.5, 1.0, 5.0, 10.0],
+        'l1_ratio': [0.1, 0.3, 0.5, 0.7, 0.9],
+        'fit_intercept': [True, False],
+        'normalize': [True, False]
+    }
+
+    rand_search_elastic_net = RandomizedSearchCV(
+        estimator = elastic_net,
+        param_distributions = param_dist,
+        n_iter = 100,
+        cv = 5,
+        random_state = 42
+    )
+    rand_search_elastic_net.fit(X, y)
+
+    best_estimator = rand_search_elastic_net.best_estimator_
+    best_estimator_coefficients = rand_search_elastic_net.best_estimator_.coef_
+    best_parameters = rand_search_elastic_net.best_estimator_.best_params_
+
+    return (best_estimator, best_estimator_coefficients, best_parameters)
+
 if __name__ == '__main__':
     current_path = os.path.abspath(__file__)
     data_file_path = os.path.abspath(os.path.join(current_path, '..', '..', 'data', 'train.air.csv'))
@@ -114,3 +144,13 @@ if __name__ == '__main__':
     The mean squared error for lasso regression on the test set is:
     {test_mse}
     ''')
+
+    # Elastic Net
+    elastic_net_best_estimator, elastic_net_best_estimator_coefficients, elastic_net_best_parameters = elastic_net_regression(X_train, y_train)
+    y_pred = elastic_net_regression.predict(X_test)
+    test_mse = mean_squared_error(y_test, y_pred)
+    print(fr'''
+    The mean squared error for elastic net regression on the test set is:
+    {test_mse}
+    ''')
+
