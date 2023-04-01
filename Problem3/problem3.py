@@ -16,6 +16,9 @@ from sklearn.linear_model import Ridge, Lasso, ElasticNet
 import seaborn as sns
 import matplotlib.pyplot as plt
 
+# Imported Modules
+from adaptive_lasso_regression import AdaptiveLasso
+
 def mean_squared_error(
     y : np.ndarray,
     y_pred : np.ndarray
@@ -81,6 +84,35 @@ def lasso_regression(
 
     return (best_estimator, best_estimator_coefficients, best_parameters)
 
+def adaptive_lasso_regression(
+    X : np.ndarray,
+    y : np.ndarray,
+    verbose : bool = False
+) -> tuple[object, np.ndarray, dict]:
+    '''
+    '''
+    adaptive_lasso = AdaptiveLasso(verbose = verbose)
+
+    param_dist = {
+        'alpha': np.concatenate((np.arange(0.01, 1, 0.2), np.arange(0, 10, 0.5))),
+        'gamma': np.concatenate((np.arange(0.01, 1, 0.2), np.arange(0, 10, 0.5)))
+    }
+
+    rand_search_adaptive_lasso = RandomizedSearchCV(
+        estimator = adaptive_lasso,
+        param_distributions = param_dist,
+        n_iter = 100,
+        cv = 5,
+        random_state = 42
+    )
+    rand_search_adaptive_lasso.fit(X, y)
+
+    best_estimator = rand_search_adaptive_lasso.best_estimator_
+    best_estimator_coefficients = rand_search_adaptive_lasso.best_estimator_.coef_
+    best_parameters = rand_search_adaptive_lasso.best_params_
+
+    return (best_estimator, best_estimator_coefficients, best_parameters)
+
 def elastic_net_regression(
     X : np.ndarray,
     y : np.ndarray
@@ -143,6 +175,14 @@ if __name__ == '__main__':
     test_mse = mean_squared_error(y_test, y_pred)
     print(fr'''
     The mean squared error for lasso regression on the test set is: {round(test_mse, 5)}
+    ''')
+
+    # Adaptive Lasso
+    adaptive_lasso_best_estimator, adaptive_lasso_best_estimator_coefficients, adaptive_lasso_best_parameters = adaptive_lasso_regression(X_train, y_train, verbose = True)
+    y_pred = adaptive_lasso_best_estimator.predict(X_test)
+    test_mse = mean_squared_error(y_test, y_pred)
+    print(fr'''
+    The mean squared error for adaptive lasso regression on the test set is: {round(test_mse, 5)}
     ''')
 
     # Elastic Net
