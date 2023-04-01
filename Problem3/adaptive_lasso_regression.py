@@ -1,90 +1,59 @@
 import numpy as np
-from sklearn.metrics import mean_squared_error
 from sklearn.base import BaseEstimator, RegressorMixin
+from sklearn.model_selection import RandomizedSearchCV
+from sklearn.linear_model import Ridge, Lasso, ElasticNet, LinearRegression, lasso_path
 
 class AdaptiveLasso(BaseEstimator, RegressorMixin):
     def __init__(
         self,
-        alpha : float = 1.0,
-        gamma : float = 1.0,
-        max_iter : int = 1000,
-        tol : float = 1e-20,
-        verbose : bool = False
+        ols_betas : np.ndarray,
+        gamma : float,
+        best_estimator : object
     ) -> None:
         '''
         '''
-        self.alpha = alpha
+        self.ols_betas = None
+        self.gamma = None
+        self.best_estimator = None
+
+    def adaptive_lasso_regression(
+        self,
+        X : np.ndarray,
+        y : np.ndarray,
+        gamma : float
+    ) -> tuple[object, np.ndarray, dict]:
+        '''
+        '''
         self.gamma = gamma
-        self.max_iter = max_iter
-        self.tol = tol
-        self.coef_ = None
-        self.verbose = verbose
 
-    def loss_function(
-        self,
-        y : np.ndarray,
-        y_pred : np.ndarray
-    ):
-        '''
-        '''
-        return np.mean((y - y_pred)**2)
+        self.ols_betas = LinearRegression(fit_intercept = False).fit(X, y).coef_
+        w_ols = self.ols_betas ** (-self.gamma)
 
-    def loss_gradient(
-        self,
-        y : np.ndarray,
-        y_pred : np.ndarray,
-        X : np.ndarray
-    ):
-        '''
-        '''
-        return -2 * np.mean((y - y_pred)[:, np.newaxis] * X, axis = 0)
+        X_ols = X.copy() / w_ols
 
-    def adaptive_weights(
-        self,
-        coef_ : np.ndarray
-    ) -> np.ndarray:
-        '''
-        '''
-        return np.abs(coef_) ** (self.gamma - 1)
-
-    def coordinate_gradient_descent(
-        self,
-        X : np.ndarray,
-        y : np.ndarray
-    ) -> None:
-        '''
-        '''
-        n_samples, n_features = X.shape
-        self.coef_ = np.ones(n_features) * 1e-2
-        y_pred = np.dot(X, self.coef_)
+        lambdas, lasso_betas, _ = lasso_path(X_ols, y)
         
-        for iteration in range(self.max_iter):
-            coef__old = self.coef_.copy()
-            
-            for j in range(n_features):
-                y_pred = y_pred - X[:, j] * self.coef_[j]
-                gradient = self.loss_gradient(y, y_pred, X[:, j])
-                z_j = np.sum(X[:, j] ** 2)
-                weight = self.adaptive_weights(self.coef_[j])
-                self.coef_[j] = np.sign(gradient[j]) * max(0, np.abs(gradient[j]) - self.alpha * weight) / z_j
-                y_pred = np.dot(X, self.coef_)
-            
-            if self.verbose:
-                print(fr'''Iteration: {iteration}''')
-                print(fr'''Frobenius-norm : {np.linalg.norm(self.coef_ - coef__old)}''')
-            
-            if np.linalg.norm(self.coef_ - coef__old) < self.tol:
-                break
+        lasso = Lasso()
 
-    def fit(
-        self,
-        X : np.ndarray,
-        y : np.ndarray
-    ):
-        '''
-        '''
-        self.coordinate_gradient_descent(X, y)
-        return self
+        param_dist = {
+            'alpha': lambdas,
+            'fit_intercept': [True, False]
+        }
+
+        rand_search_adaptive_lasso = RandomizedSearchCV(
+            estimator = lasso,
+            param_distributions = param_dist,
+            n_iter = 100,
+            cv = 5,
+            random_state = 42
+        )
+        rand_search_adaptive_lasso.fit(X_ols, y)
+
+        self.best_estimator = rand_search_adaptive_lasso.best_estimator_
+        best_estimator_coefficients = self.best_estimator.coef_
+        best_parameters = rand_search_adaptive_lasso.best_params_
+
+        return (self.best_estimator, best_estimator_coefficients, best_parameters)
 
     def predict(
         self,
@@ -92,4 +61,6 @@ class AdaptiveLasso(BaseEstimator, RegressorMixin):
     ) -> np.ndarray:
         '''
         '''
-        return np.dot(X, self.coef_)
+        w_ols = self.ols_betas ** (-self.gamma)
+        X_ols = X.copy() / w_ols
+        return  self.best_estimator.predict(X_ols)

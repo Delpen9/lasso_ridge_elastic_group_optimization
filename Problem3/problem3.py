@@ -9,14 +9,13 @@ warnings.filterwarnings("ignore")
 # Sklearn Modules
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import RandomizedSearchCV
-from scipy.stats import uniform
-from sklearn.linear_model import Ridge, Lasso, ElasticNet
+from sklearn.linear_model import Ridge, Lasso, ElasticNet, LinearRegression, lasso_path
 
 # Plotting
 import seaborn as sns
 import matplotlib.pyplot as plt
 
-# Imported Modules
+# Import
 from adaptive_lasso_regression import AdaptiveLasso
 
 def mean_squared_error(
@@ -81,35 +80,6 @@ def lasso_regression(
     best_estimator = rand_search_lasso.best_estimator_
     best_estimator_coefficients = rand_search_lasso.best_estimator_.coef_
     best_parameters = rand_search_lasso.best_params_
-
-    return (best_estimator, best_estimator_coefficients, best_parameters)
-
-def adaptive_lasso_regression(
-    X : np.ndarray,
-    y : np.ndarray,
-    verbose : bool = False
-) -> tuple[object, np.ndarray, dict]:
-    '''
-    '''
-    adaptive_lasso = AdaptiveLasso(verbose = verbose)
-
-    param_dist = {
-        'alpha': np.arange(0.01, 1, 0.1),
-        'gamma': np.arange(0.01, 1, 0.1)
-    }
-
-    rand_search_adaptive_lasso = RandomizedSearchCV(
-        estimator = adaptive_lasso,
-        param_distributions = param_dist,
-        n_iter = 5,
-        cv = 5,
-        random_state = 42
-    )
-    rand_search_adaptive_lasso.fit(X, y)
-
-    best_estimator = rand_search_adaptive_lasso.best_estimator_
-    best_estimator_coefficients = rand_search_adaptive_lasso.best_estimator_.coef_
-    best_parameters = rand_search_adaptive_lasso.best_params_
 
     return (best_estimator, best_estimator_coefficients, best_parameters)
 
@@ -178,8 +148,10 @@ if __name__ == '__main__':
     ''')
 
     # Adaptive Lasso
-    adaptive_lasso_best_estimator, adaptive_lasso_best_estimator_coefficients, adaptive_lasso_best_parameters = adaptive_lasso_regression(X_train, y_train, verbose = False)
-    y_pred = adaptive_lasso_best_estimator.predict(X_test)
+    gamma = 2
+    a_lasso = AdaptiveLasso(None, None, None)
+    adaptive_lasso_best_estimator, adaptive_lasso_best_estimator_coefficients, adaptive_lasso_best_parameters = a_lasso.adaptive_lasso_regression(X_train, y_train, gamma)
+    y_pred = a_lasso.predict(X_test)
     test_mse = mean_squared_error(y_test, y_pred)
     print(fr'''
     The mean squared error for adaptive lasso regression on the test set is: {round(test_mse, 5)}
