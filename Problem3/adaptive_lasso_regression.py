@@ -8,7 +8,7 @@ class AdaptiveLasso(BaseEstimator, RegressorMixin):
         alpha : float = 1.0,
         gamma : float = 1.0,
         max_iter : int = 1000,
-        tol : float = 1e-6,
+        tol : float = 1e-20,
         verbose : bool = False
     ) -> None:
         '''
@@ -17,7 +17,7 @@ class AdaptiveLasso(BaseEstimator, RegressorMixin):
         self.gamma = gamma
         self.max_iter = max_iter
         self.tol = tol
-        self.beta = None
+        self.coef_ = None
         self.verbose = verbose
 
     def loss_function(
@@ -27,7 +27,7 @@ class AdaptiveLasso(BaseEstimator, RegressorMixin):
     ):
         '''
         '''
-        return p.mean((y - y_pred)**2)
+        return np.mean((y - y_pred)**2)
 
     def loss_gradient(
         self,
@@ -41,11 +41,11 @@ class AdaptiveLasso(BaseEstimator, RegressorMixin):
 
     def adaptive_weights(
         self,
-        beta : np.ndarray
+        coef_ : np.ndarray
     ) -> np.ndarray:
         '''
         '''
-        return np.abs(beta) ** (self.gamma - 1)
+        return np.abs(coef_) ** (self.gamma - 1)
 
     def coordinate_gradient_descent(
         self,
@@ -55,24 +55,25 @@ class AdaptiveLasso(BaseEstimator, RegressorMixin):
         '''
         '''
         n_samples, n_features = X.shape
-        self.beta = np.zeros(n_features)
-        y_pred = np.dot(X, self.beta)
+        self.coef_ = np.ones(n_features) * 1e-2
+        y_pred = np.dot(X, self.coef_)
         
         for iteration in range(self.max_iter):
-            beta_old = self.beta.copy()
+            coef__old = self.coef_.copy()
             
             for j in range(n_features):
-                y_pred = y_pred - X[:, j] * self.beta[j]
+                y_pred = y_pred - X[:, j] * self.coef_[j]
                 gradient = self.loss_gradient(y, y_pred, X[:, j])
                 z_j = np.sum(X[:, j] ** 2)
-                weight = self.adaptive_weights(self.beta[j])
-                self.beta[j] = np.sign(gradient) * max(0, np.abs(gradient) - self.alpha * weight) / z_j
-                y_pred = y_pred + X[:, j] * self.beta[j]
+                weight = self.adaptive_weights(self.coef_[j])
+                self.coef_[j] = np.sign(gradient[j]) * max(0, np.abs(gradient[j]) - self.alpha * weight) / z_j
+                y_pred = np.dot(X, self.coef_)
             
             if self.verbose:
-                print(np.linalg.norm(self.beta - beta_old))
+                print(fr'''Iteration: {iteration}''')
+                print(fr'''Frobenius-norm : {np.linalg.norm(self.coef_ - coef__old)}''')
             
-            if np.linalg.norm(self.beta - beta_old) < self.tol:
+            if np.linalg.norm(self.coef_ - coef__old) < self.tol:
                 break
 
     def fit(
@@ -91,4 +92,4 @@ class AdaptiveLasso(BaseEstimator, RegressorMixin):
     ) -> np.ndarray:
         '''
         '''
-        return np.dot(X, self.beta)
+        return np.dot(X, self.coef_)

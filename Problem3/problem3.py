@@ -94,14 +94,14 @@ def adaptive_lasso_regression(
     adaptive_lasso = AdaptiveLasso(verbose = verbose)
 
     param_dist = {
-        'alpha': np.concatenate((np.arange(0.01, 1, 0.2), np.arange(0, 10, 0.5))),
-        'gamma': np.concatenate((np.arange(0.01, 1, 0.2), np.arange(0, 10, 0.5)))
+        'alpha': np.arange(0.01, 1, 0.1),
+        'gamma': np.arange(0.01, 1, 0.1)
     }
 
     rand_search_adaptive_lasso = RandomizedSearchCV(
         estimator = adaptive_lasso,
         param_distributions = param_dist,
-        n_iter = 100,
+        n_iter = 5,
         cv = 5,
         random_state = 42
     )
@@ -178,7 +178,7 @@ if __name__ == '__main__':
     ''')
 
     # Adaptive Lasso
-    adaptive_lasso_best_estimator, adaptive_lasso_best_estimator_coefficients, adaptive_lasso_best_parameters = adaptive_lasso_regression(X_train, y_train, verbose = True)
+    adaptive_lasso_best_estimator, adaptive_lasso_best_estimator_coefficients, adaptive_lasso_best_parameters = adaptive_lasso_regression(X_train, y_train, verbose = False)
     y_pred = adaptive_lasso_best_estimator.predict(X_test)
     test_mse = mean_squared_error(y_test, y_pred)
     print(fr'''
