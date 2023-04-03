@@ -138,13 +138,15 @@ if __name__ == '__main__':
     data_file_path = os.path.abspath(os.path.join(current_path, '..', '..', 'data', 'NSC.mat'))
     data_train = scipy.io.loadmat(data_file_path)
 
-    X_train = np.stack(data_train['x'][0])
+    # X_train = np.stack(data_train['x'][0])
 
-    make_observation_graphs(X_train)
-    make_b_spline_observation_graphs(X_train)
+    # make_observation_graphs(X_train)
+    # make_b_spline_observation_graphs(X_train)
 
-    X_train_reduced = reduce_training_data_with_bsplines(X_train)
+    # X_train_reduced = reduce_training_data_with_bsplines(X_train)
 
     data_file_path = os.path.abspath(os.path.join(current_path, '..', '..', 'data', 'NSC.test.mat'))
     data_test = scipy.io.loadmat(data_file_path)
     X_test = np.stack(data_test['x_test'][0])
+
+    print(X_test.shape)
