@@ -5,10 +5,7 @@ from sklearn.linear_model import Ridge, Lasso, ElasticNet, LinearRegression, las
 
 class AdaptiveLasso(BaseEstimator, RegressorMixin):
     def __init__(
-        self,
-        ols_betas : np.ndarray,
-        gamma : float,
-        best_estimator : object
+        self
     ) -> None:
         '''
         '''
