@@ -121,16 +121,30 @@ def make_b_spline_observation_graphs(
             sensor_number = sensor
         )
 
+def reduce_training_data_with_bsplines(
+    X : np.ndarray
+) -> None:
+    '''
+    '''
+    sensors = np.arange(0, 10)
+    X_reduced = []
+    for sensor in sensors:
+        reduced_sensor_data = b_spline_reduction(X[sensor].copy())
+        X_reduced.append(reduced_sensor_data)
+    return X_reduced
+
 if __name__ == '__main__':
     current_path = os.path.abspath(__file__)
     data_file_path = os.path.abspath(os.path.join(current_path, '..', '..', 'data', 'NSC.mat'))
     data_train = scipy.io.loadmat(data_file_path)
 
     X_train = np.stack(data_train['x'][0])
-    # make_observation_graphs(X_train)
+
+    make_observation_graphs(X_train)
     make_b_spline_observation_graphs(X_train)
+
+    X_train_reduced = reduce_training_data_with_bsplines(X_train)
 
     data_file_path = os.path.abspath(os.path.join(current_path, '..', '..', 'data', 'NSC.test.mat'))
     data_test = scipy.io.loadmat(data_file_path)
     X_test = np.stack(data_test['x_test'][0])
-    # print(X_test)
