@@ -12,6 +12,10 @@ import scipy.io
 # B-Spline
 from scipy.interpolate import make_interp_spline, splrep, BSpline
 
+# Modeling
+from group_lasso import GroupLasso
+from sklearn.metrics import mean_squared_error
+
 def spline_coefficients_graph(
     X : np.ndarray,
     filename : str,
@@ -121,9 +125,9 @@ def make_b_spline_observation_graphs(
             sensor_number = sensor
         )
 
-def reduce_training_data_with_bsplines(
+def reduce_data_with_bsplines(
     X : np.ndarray
-) -> None:
+) -> np.ndarray:
     '''
     '''
     sensors = np.arange(0, 10)
@@ -131,22 +135,50 @@ def reduce_training_data_with_bsplines(
     for sensor in sensors:
         reduced_sensor_data = b_spline_reduction(X[sensor].copy())
         X_reduced.append(reduced_sensor_data)
-    return X_reduced
+    return np.hstack(tuple(X_reduced))
 
 if __name__ == '__main__':
     current_path = os.path.abspath(__file__)
     data_file_path = os.path.abspath(os.path.join(current_path, '..', '..', 'data', 'NSC.mat'))
     data_train = scipy.io.loadmat(data_file_path)
 
-    # X_train = np.stack(data_train['x'][0])
+    X_train = np.stack(data_train['x'][0])
+    y_train = data_train['y']
 
     # make_observation_graphs(X_train)
     # make_b_spline_observation_graphs(X_train)
 
-    # X_train_reduced = reduce_training_data_with_bsplines(X_train)
+    X_train_reduced = reduce_data_with_bsplines(X_train)
+
+    groups = np.repeat(np.arange(1, 11), 10)
+    group_lasso = GroupLasso(
+        groups = groups,
+        group_reg = 0.05,
+        l1_reg = 0.005,
+        frobenius_lipschitz = False,
+        scale_reg = 'inverse_group_size',
+        subsampling_scheme = 0.5,
+        supress_warning = True,
+        n_iter = 5000,
+        tol = 1e-10,
+    )
+    group_lasso.fit(X_train_reduced, y_train)
+
+    print(fr'''
+    The sensors which correlate with the air/fuel ratio are:
+    {group_lasso.chosen_groups_}
+    ''')
 
     data_file_path = os.path.abspath(os.path.join(current_path, '..', '..', 'data', 'NSC.test.mat'))
     data_test = scipy.io.loadmat(data_file_path)
     X_test = np.stack(data_test['x_test'][0])
+    y_test = data_test['y_test']
 
-    print(X_test.shape)
+    X_test_reduced = reduce_data_with_bsplines(X_test)
+
+    y_pred = group_lasso.predict(X_test_reduced)
+
+    print(fr'''
+    The mean-square error on the test set is:
+    {mean_squared_error(y_pred, y_test)}
+    ''')
