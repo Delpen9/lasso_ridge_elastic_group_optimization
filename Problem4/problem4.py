@@ -5,6 +5,7 @@ import numpy as np
 # Plotting
 import seaborn as sns
 import matplotlib.pyplot as plt
+import scipy as sp
 
 # Load the .mat file
 import scipy.io
@@ -138,6 +139,8 @@ def reduce_data_with_bsplines(
     return np.hstack(tuple(X_reduced))
 
 if __name__ == '__main__':
+    np.random.seed(1234)
+    
     current_path = os.path.abspath(__file__)
     data_file_path = os.path.abspath(os.path.join(current_path, '..', '..', 'data', 'NSC.mat'))
     data_train = scipy.io.loadmat(data_file_path)
@@ -154,7 +157,7 @@ if __name__ == '__main__':
     group_lasso = GroupLasso(
         groups = groups,
         group_reg = 0.05,
-        l1_reg = 0.005,
+        l1_reg = 0.01,
         frobenius_lipschitz = False,
         scale_reg = 'inverse_group_size',
         subsampling_scheme = 0.5,
@@ -164,10 +167,46 @@ if __name__ == '__main__':
     )
     group_lasso.fit(X_train_reduced, y_train)
 
+    chosen_groups = np.array(list(group_lasso.chosen_groups_)).astype(int)
     print(fr'''
     The sensors which correlate with the air/fuel ratio are:
-    {group_lasso.chosen_groups_}
+    {chosen_groups}
     ''')
+
+    ## ==================
+    ## Plot correlations
+    ## ==================
+    for index in chosen_groups:
+        x_train_flattened = data_train['x'][0][index].flatten().copy()
+        y_train_flattened = y_train.flatten().copy()
+
+        ax = sns.regplot(
+            x = x_train_flattened,
+            y = y_train_flattened,
+            line_kws = {'color': 'red'},
+            scatter_kws = {'alpha': 0.5, 's': 10},
+            ci = None
+        )
+
+        r, p = sp.stats.pearsonr(x_train_flattened, y_train_flattened)
+        ax = plt.gca()
+        ax.text(
+            .05,
+            .8,
+            'Slope (m) = {:.2f},\np-value = {:.2g}'.format(r, p),
+            transform = ax.transAxes
+        )
+
+        file_path = os.path.abspath(os.path.join(current_path, '..', '..', 'output', fr'sensor_{str(index)}_correlation.png'))
+
+        plt.title(fr'Sensor {str(index)}: Observations VS. Air/Fuel Ratio')
+        plt.xlabel(fr'Sensor {str(index)}: Observations')
+        plt.ylabel('Air/Fuel Ratio')
+
+        plt.savefig(file_path, dpi = 100)
+        plt.clf()
+        plt.cla()
+    ## ==================
 
     data_file_path = os.path.abspath(os.path.join(current_path, '..', '..', 'data', 'NSC.test.mat'))
     data_test = scipy.io.loadmat(data_file_path)
