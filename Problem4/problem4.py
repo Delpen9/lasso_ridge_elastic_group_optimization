@@ -140,7 +140,7 @@ def reduce_data_with_bsplines(
 
 if __name__ == '__main__':
     np.random.seed(1234)
-    
+
     current_path = os.path.abspath(__file__)
     data_file_path = os.path.abspath(os.path.join(current_path, '..', '..', 'data', 'NSC.mat'))
     data_train = scipy.io.loadmat(data_file_path)
@@ -157,7 +157,7 @@ if __name__ == '__main__':
     group_lasso = GroupLasso(
         groups = groups,
         group_reg = 0.05,
-        l1_reg = 0.01,
+        l1_reg = 0.008,
         frobenius_lipschitz = False,
         scale_reg = 'inverse_group_size',
         subsampling_scheme = 0.5,
